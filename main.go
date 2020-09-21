@@ -1,66 +1,48 @@
 package main
 
 import (
-	"message-board-api/controller"
+	"context"
+	"database/sql"
+	"fmt"
 	"message-board-api/infra/mysql"
-	"message-board-api/usecase"
+	"message-board-api/router"
+	"net/http"
+	"os"
+	"os/signal"
 	"time"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	articleRepo := mysql.NewArticleRepository()
-	r := gin.Default()
-
-	r.Use(cors.New(cors.Config{
-		AllowMethods: []string{"POST", "GET", "OPTIONS", "PUT", "DELETE"},
-		AllowHeaders: []string{
-			"Access-Control-Allow-Headers",
-			"Content-Type",
-			"Content-Length",
-			"Accept-Encoding",
-			"X-CSRF-Token",
-			"Authorization",
-		},
-		AllowOrigins: []string{"*"},
-		MaxAge:       24 * time.Hour,
-	}))
-
-	// ping := &controller.PingController{}
-	// r.GET("/ping", ping.Ping)
-
-	article := &controller.ArticleController{
-		UseCase: usecase.NewArticleUseCase(articleRepo),
+	db, err := sql.Open("mysql", "ito:pass1234@tcp(127.0.0.1:3306)/messageboard")
+	if err != nil {
+		fmt.Printf("%v", err)
 	}
-	r.GET("/articles", article.List)
+	routerConfig := &router.Config{
+		MySQLArticleRepo: mysql.NewArticleRepository(db),
+	}
+	router := router.New(routerConfig)
 
-	r.POST("/articles", article.Create)
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", 8080), // TODO: logger
+		Handler: router,
+	}
 
-	r.DELETE("/articles", article.Delete)
+	go func() {
+		fmt.Println("Server starting ...") // TODO: logger
+		if err := srv.ListenAndServe(); err != nil {
+			fmt.Printf("%v", err) // TODO: logger
+		}
+	}()
 
-	r.PUT("/articles", article.Update)
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	fmt.Println("Server stopping ...") // TODO: logger
 
-	r.Run(":3000")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		fmt.Printf("Server shutdown: %v", err) // TODO: logger
+	}
+	fmt.Println("Server stopped") // TODO: logger
 }
-
-// func createDummyArticles(articleRepo repository.ArticleRepository) {
-// 	articles := []model.Article{
-// 		{Name: "user1", Message: "hello"},
-// 		{Name: "user2", Message: "nice to meet you"},
-// 		{Name: "user3", Message: "long time see you"},
-// 		{Name: "user4", Message: "glad to see you"},
-// 		{Name: "user5", Message: "miss you"},
-// 		{Name: "user6", Message: "so good"},
-// 		{Name: "user7", Message: "absolutely"},
-// 	}
-
-// 	ctx := context.Background()
-// 	for _, a := range articles {
-// 		err := articleRepo.Create(ctx, &a)
-// 		if err != nil {
-// 			panic(err.Error())
-// 		}
-// 	}
-// }

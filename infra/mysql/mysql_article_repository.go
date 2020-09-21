@@ -4,22 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	// "errors"
-
 	"message-board-api/model"
+	"message-board-api/repository"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
 // MySQLArticleRepository ...
 type MySQLArticleRepository struct {
+	db *sql.DB
 }
 
 // NewArticleRepository ...
-func NewArticleRepository() *MySQLArticleRepository {
-	return &MySQLArticleRepository{}
+func NewArticleRepository(db *sql.DB) repository.ArticleRepository {
+	return &MySQLArticleRepository{db: db}
 }
+
+// func NewArticleRepository(db *sql.DB) *MySQLArticleRepository {
+// 	return &MySQLArticleRepository{db: db}
+// }
 
 // List ...
 func (r *MySQLArticleRepository) List(ctx context.Context) ([]*model.Article, error) {

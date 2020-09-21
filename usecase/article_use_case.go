@@ -13,9 +13,7 @@ type ArticleUseCase struct {
 
 // NewArticleUseCase ...
 func NewArticleUseCase(articleRepo repository.ArticleRepository) *ArticleUseCase {
-	return &ArticleUseCase{
-		articleRepo: articleRepo,
-	}
+	return &ArticleUseCase{articleRepo: articleRepo}
 }
 
 // List ...
